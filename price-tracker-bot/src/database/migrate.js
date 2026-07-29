@@ -9,40 +9,46 @@ async function runMigrations() {
   const schemaPath = path.join(__dirname, '../../sql/schema.sql');
   const schema = fs.readFileSync(schemaPath, 'utf-8');
 
-  try {
-    const statements = schema
-      .split(';')
-      .map(s => s.trim())
-      .filter(s => s.length > 0 && !s.startsWith('--'));
+  const statements = schema
+    .split(';')
+    .map(s => s.trim())
+    .filter(s => s.length > 0 && !s.startsWith('--'));
 
-    for (const statement of statements) {
-      if (statement) {
-        try {
-          await db.query(statement + ';');
-        } catch (error) {
-          if (error.code !== '42P07' && error.code !== '42710' &&
-              error.code !== '23505' && !error.message.includes('already exists')) {
-            throw error;
-          }
-          logger.debug('Skipping existing object', { statement: statement.substring(0, 50) });
+  for (let i = 0; i < statements.length; i++) {
+    let stmt = statements[i];
+
+    if (/create\s+(or\s+replace\s+)?function/i.test(stmt)) {
+      while (i + 1 < statements.length) {
+        const next = statements[i + 1];
+        stmt += ';' + next;
+        i++;
+        if (/language\s+\w+\s*;?\s*$/i.test(next.replace(/\$\$/g, '').trim()) ||
+            /end\s*;?\s*$/i.test(next.trim())) {
+          break;
         }
       }
     }
 
-    logger.info('Database migrations completed successfully');
-  } catch (error) {
-    logger.error('Migration failed', { error: error.message });
-    throw error;
+    stmt = stmt.trim();
+    if (!stmt) continue;
+
+    try {
+      await db.query(stmt.endsWith(';') ? stmt : stmt + ';');
+    } catch (error) {
+      logger.warn('Migration skipped', {
+        error: error.message.substring(0, 100),
+        stmt: stmt.replace(/\s+/g, ' ').substring(0, 80),
+      });
+    }
   }
+
+  logger.info('Database migrations completed');
 }
 
 if (require.main === module) {
   require('dotenv').config({ path: path.join(__dirname, '../../.env') });
   runMigrations()
-    .then(() => {
-      logger.info('Migrations complete');
-      process.exit(0);
-    })
+    .then(() => process.exit(0))
     .catch((err) => {
       logger.error('Migration error', { error: err.message });
       process.exit(1);

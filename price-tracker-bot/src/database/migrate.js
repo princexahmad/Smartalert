@@ -17,18 +17,6 @@ async function runMigrations() {
   for (let i = 0; i < statements.length; i++) {
     let stmt = statements[i];
 
-    if (/create\s+(or\s+replace\s+)?function/i.test(stmt)) {
-      while (i + 1 < statements.length) {
-        const next = statements[i + 1];
-        stmt += ';' + next;
-        i++;
-        if (/language\s+\w+\s*;?\s*$/i.test(next.replace(/\$\$/g, '').trim()) ||
-            /end\s*;?\s*$/i.test(next.trim())) {
-          break;
-        }
-      }
-    }
-
     stmt = stmt.trim();
     if (!stmt) continue;
 
@@ -39,6 +27,36 @@ async function runMigrations() {
         error: error.message.substring(0, 100),
         stmt: stmt.replace(/\s+/g, ' ').substring(0, 80),
       });
+    }
+  }
+
+  const extraStatements = [
+    `CREATE OR REPLACE FUNCTION update_updated_at_column()
+     RETURNS TRIGGER AS $func$
+     BEGIN
+         NEW.updated_at = NOW();
+         RETURN NEW;
+     END;
+     $func$ language 'plpgsql'`,
+
+    `CREATE TRIGGER update_users_updated_at
+     BEFORE UPDATE ON users FOR EACH ROW
+     EXECUTE FUNCTION update_updated_at_column()`,
+
+    `CREATE TRIGGER update_subscriptions_updated_at
+     BEFORE UPDATE ON subscriptions FOR EACH ROW
+     EXECUTE FUNCTION update_updated_at_column()`,
+
+    `CREATE TRIGGER update_products_updated_at
+     BEFORE UPDATE ON products FOR EACH ROW
+     EXECUTE FUNCTION update_updated_at_column()`,
+  ];
+
+  for (const stmt of extraStatements) {
+    try {
+      await db.query(stmt);
+    } catch (error) {
+      logger.warn('Extra statement skipped', { error: error.message.substring(0, 100) });
     }
   }
 

@@ -129,10 +129,12 @@ function createBot() {
     }
   });
 
-  bot.action(/alerttype_(.+)_(.+)/, async (ctx) => {
+  bot.action(/alerttype_([a-z]+)_(.+)/, async (ctx) => {
     await ctx.answerCbQuery();
-    const type = ctx.match[1];
+    const rawType = ctx.match[1];
     const tempId = ctx.match[2];
+    const typeMap = { pricedrop: 'price_drop', instock: 'in_stock', pincode: 'pincode', offers: 'offers', all: 'all', done: 'done' };
+    const type = typeMap[rawType] || rawType;
     if (type === 'done') {
       if (!ctx.session.data.alertTypes || ctx.session.data.alertTypes.length === 0) {
         return ctx.answerCbQuery('Select at least one alert type!', { show_alert: true });

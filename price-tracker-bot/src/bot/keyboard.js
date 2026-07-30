@@ -29,8 +29,8 @@ function nameChoiceKeyboard(productId) {
 
 function alertTypeKeyboard(productId) {
   return Markup.inlineKeyboard([
-    [Markup.button.callback(' Price Drop', `alerttype_price_${productId}`)],
-    [Markup.button.callback(' In Stock', `alerttype_stock_${productId}`)],
+    [Markup.button.callback(' Price Drop', `alerttype_pricedrop_${productId}`)],
+    [Markup.button.callback(' In Stock', `alerttype_instock_${productId}`)],
     [Markup.button.callback(' Pincode Availability', `alerttype_pincode_${productId}`)],
     [Markup.button.callback(' Offers', `alerttype_offers_${productId}`)],
     [Markup.button.callback(' All Alerts', `alerttype_all_${productId}`)],

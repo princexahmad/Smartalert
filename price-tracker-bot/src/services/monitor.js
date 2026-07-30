@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const logger = require('../utils/logger');
 const config = require('../config');
+const db = require('../database/connection');
 const productQueries = require('../database/queries/products');
 const alertQueries = require('../database/queries/alerts');
 const subscriptionQueries = require('../database/queries/subscriptions');
@@ -185,14 +186,40 @@ async function handleExpiredSubscriptions() {
   }
 }
 
+async function sendSummaryToUsers(bot) {
+  try {
+    const users = await db.query(
+      `SELECT u.id, u.telegram_id, up.notify_summary
+       FROM users u
+       LEFT JOIN user_profiles up ON u.id = up.user_id
+       WHERE u.is_active = true AND (up.notify_summary IS NULL OR up.notify_summary = true)`
+    );
+    for (const u of users.rows) {
+      const products = await productQueries.findByUser(u.id, 1, 100);
+      if (products.products.length > 0) {
+        await notificationService.sendSummary(bot, u.telegram_id, products.products);
+      }
+    }
+    logger.info(`Summary sent to ${users.rows.length} users`);
+  } catch (error) {
+    logger.error('Summary sending error', { error: error.message });
+  }
+}
+
 function startMonitor(bot) {
   logger.info(`Starting price monitor (every ${config.monitor.intervalMinutes} minutes)`);
 
   const cronExpression = `*/${config.monitor.intervalMinutes} * * * *`;
 
+  let summaryCount = 0;
   monitorInterval = cron.schedule(cronExpression, async () => {
     await runMonitoringCycle();
     await handleExpiredSubscriptions();
+    summaryCount++;
+    if (summaryCount >= 1) {
+      await sendSummaryToUsers(bot);
+      summaryCount = 0;
+    }
   });
 
   runMonitoringCycle();
@@ -213,4 +240,5 @@ module.exports = {
   stopMonitor,
   runMonitoringCycle,
   checkProductPrice,
+  sendSummaryToUsers,
 };

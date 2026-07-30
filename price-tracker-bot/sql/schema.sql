@@ -253,3 +253,117 @@ LEFT JOIN subscriptions s ON u.id = s.user_id AND s.status = 'active'
 LEFT JOIN plans p2 ON COALESCE(s.plan_id, (SELECT id FROM plans WHERE code = 'free')) = p2.id
 WHERE p.is_active = true
   AND (p.next_check_at IS NULL OR p.next_check_at <= NOW());
+
+-- =============================================
+-- USER PROFILES TABLE (extended info)
+-- =============================================
+CREATE TABLE IF NOT EXISTS user_profiles (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+    email VARCHAR(255),
+    mobile VARCHAR(20),
+    language VARCHAR(10) DEFAULT 'en',
+    notify_instant BOOLEAN DEFAULT true,
+    notify_summary BOOLEAN DEFAULT true,
+    summary_interval_minutes INTEGER DEFAULT 10,
+    last_summary_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- =============================================
+-- ALERT TYPES ENUM
+-- =============================================
+CREATE TABLE IF NOT EXISTS alert_types (
+    id SERIAL PRIMARY KEY,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    icon VARCHAR(10) DEFAULT '',
+    is_active BOOLEAN DEFAULT true
+);
+
+INSERT INTO alert_types (code, name, icon) VALUES
+('price_drop', 'Price Drop', ''),
+('in_stock', 'In Stock', ''),
+('pincode', 'Pincode Availability', ''),
+('offers', 'Offers', ''),
+('all', 'All Alerts', '')
+ON CONFLICT (code) DO NOTHING;
+
+-- =============================================
+-- PRODUCT ALERT TYPES (many-to-many)
+-- =============================================
+CREATE TABLE IF NOT EXISTS product_alert_types (
+    id SERIAL PRIMARY KEY,
+    product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    alert_type_id INTEGER NOT NULL REFERENCES alert_types(id) ON DELETE CASCADE,
+    target_price DECIMAL(12,2),
+    pincode VARCHAR(10),
+    UNIQUE(product_id, alert_type_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_product_alert_types_product_id ON product_alert_types(product_id);
+
+-- =============================================
+-- ALERT HISTORY
+-- =============================================
+CREATE TABLE IF NOT EXISTS alert_history (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+    alert_type VARCHAR(50) NOT NULL,
+    title VARCHAR(500),
+    message TEXT,
+    old_value TEXT,
+    new_value TEXT,
+    current_price DECIMAL(12,2),
+    previous_price DECIMAL(12,2),
+    discount_percentage DECIMAL(5,2),
+    in_stock BOOLEAN,
+    delivery_available BOOLEAN,
+    is_read BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_alert_history_user_id ON alert_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_alert_history_created_at ON alert_history(created_at);
+
+-- =============================================
+-- ADMIN PLAN MANAGEMENT
+-- =============================================
+CREATE TABLE IF NOT EXISTS admin_plans (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    code VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    price_inr DECIMAL(10,2) NOT NULL DEFAULT 0,
+    duration_days INTEGER NOT NULL DEFAULT 30,
+    max_alerts INTEGER NOT NULL DEFAULT 10,
+    max_products INTEGER NOT NULL DEFAULT 5,
+    monitor_interval_minutes INTEGER DEFAULT 10,
+    features JSONB DEFAULT '[]',
+    is_active BOOLEAN DEFAULT true,
+    is_deletable BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_plans_code ON admin_plans(code);
+
+INSERT INTO admin_plans (name, code, description, price_inr, duration_days, max_alerts, max_products, monitor_interval_minutes, features, is_deletable) VALUES
+('Free', 'free', 'Basic plan with limited alerts', 0, 0, 5, 3, 30, '["price_alerts", "stock_alerts"]', false),
+('Monthly', 'monthly', 'Up to 100 alerts with premium features', 499, 30, 100, 50, 10, '["price_alerts", "stock_alerts", "pincode_alerts", "offer_alerts", "summary", "priority_support"]', false),
+('Premium', 'premium', 'Unlimited alerts with all features', 999, 30, 9999, 9999, 5, '["price_alerts", "stock_alerts", "pincode_alerts", "offer_alerts", "summary", "priority_support", "api_access", "bulk_import"]', false)
+ON CONFLICT (code) DO NOTHING;
+
+-- =============================================
+-- ANALYTICS TABLE
+-- =============================================
+CREATE TABLE IF NOT EXISTS analytics (
+    id SERIAL PRIMARY KEY,
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
+    metric VARCHAR(100) NOT NULL,
+    value BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(date, metric)
+);

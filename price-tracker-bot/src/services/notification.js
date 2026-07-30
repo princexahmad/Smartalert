@@ -137,73 +137,61 @@ function buildProductListMessage(products, page, totalPages) {
 
 function buildHelpMessage() {
   return [
-    '*🤖 Price Tracker Bot - Help*',
+    '* YSF Smart Alert - Help*',
     '',
     'Track prices on Amazon.in and Flipkart.com and get instant alerts!',
     '',
-    '*📋 Commands:*',
+    '*How to use:*',
     '',
-    '/start - Start the bot and register',
-    '/help - Show this help message',
-    '/add <url> <target_price> - Add a product to track',
-    '/remove <id> - Remove a product from tracking',
-    '/list - View all your tracked products',
-    '/status <id> - Check product status',
-    '/myplan - View your current plan details',
-    '/upgrade - Upgrade to premium',
-    '/cancel - Cancel subscription',
-    '/settings - Configure notifications',
-    '/about - About this bot',
+    '1. Tap "Create Alert" button',
+    '2. Select website (Amazon/Flipkart)',
+    '3. Paste product URL',
+    '4. Choose alert name',
+    '5. Select alert type (Price Drop, Stock, Pincode, Offers)',
+    '6. Set target price / pincode',
+    '7. Confirm and done!',
     '',
-    '*💡 How to use:*',
-    '1. Send /add with a product URL and your target price',
-    '2. Bot will monitor the price every few minutes',
-    '3. Get instant alert when price drops to your target',
+    '*Features:*',
     '',
-    '*📊 Plans:*',
+    ' Create Alert - Add products to track',
+    ' My Alerts - View all your tracked products',
+    ' Alert History - Past alert notifications',
+    ' Product Status - Real-time product info',
+    ' My Plan - View your subscription',
+    ' Upgrade Plan - Get more features',
+    ' Settings - Configure preferences',
     '',
-    '*Free Plan:*',
-    '• Track up to 5 products',
-    '• Check every 30 minutes',
-    '• Price drop alerts',
+    '*Plans:*',
     '',
-    '*Premium Plan (₹499/month):*',
-    '• Track up to 100 products',
-    '• Check every 10 minutes',
-    '• Price, stock & delivery alerts',
-    '• Priority support',
-    '• API access',
+    'Free: 5 alerts, 30min checks',
+    'Monthly (\u20B9499): 100 alerts, 10min checks',
+    'Premium (\u20B9999): Unlimited alerts, 5min checks',
     '',
-    'Use /upgrade to get Premium!',
+    'Tap Upgrade Plan to subscribe!',
   ].join('\n');
 }
 
 function buildAboutMessage() {
   return [
-    '*🤖 Price Tracker Bot*',
+    '* YSF Smart Alert*',
     '',
-    'Your personal shopping assistant that monitors prices on Amazon.in and Flipkart.com.',
+    'Your intelligent product price & availability tracker.',
+    'Monitor Amazon.in and Flipkart.com in real-time.',
     '',
-    '*✨ Features:*',
-    '• Real-time price monitoring',
-    '• Price drop alerts',
-    '• Stock availability tracking',
-    '• Delivery status updates',
-    '• Seller change notifications',
-    '• Title change detection',
+    '*Features:*',
+    ' Real-time price monitoring',
+    ' Price drop & increase alerts',
+    ' Stock availability tracking',
+    ' Pincode delivery status',
+    ' Offer & deal detection',
+    ' 10-minute summary reports',
     '',
-    '*🛠️ Tech Stack:*',
-    '• Node.js + Telegraf',
-    '• PostgreSQL Database',
-    '• Playwright Scraping',
-    '• PM2 Process Manager',
-    '• Docker Ready',
-    '',
-    '*📱 Platform Support:*',
+    '*Platform Support:*',
     ' Amazon India',
     ' Flipkart',
     '',
-    '*Version:* 1.0.0',
+    '*Version:* 2.0.0',
+    '*Contact:* faizan.mech.fk@gmail.com',
   ].join('\n');
 }
 
@@ -248,15 +236,92 @@ function buildPlanMessage(user, subscription, plan) {
 async function sendAlert(bot, telegramId, product, changes) {
   const { text, keyboard } = buildPriceAlertMessage(product, changes);
   try {
+    const kb = require('../bot/keyboard');
+    const notifKb = kb.alertNotificationKeyboard(product.id, product.url);
     await bot.telegram.sendMessage(telegramId, text, {
       parse_mode: 'Markdown',
-      reply_markup: keyboard.reply_markup,
+      reply_markup: notifKb.reply_markup,
       disable_web_page_preview: false,
     });
     logger.info('Alert sent', { telegramId, productId: product.id, type: changes.type });
     return true;
   } catch (error) {
     logger.error('Failed to send alert', { telegramId, productId: product.id, error: error.message });
+    return false;
+  }
+}
+
+function buildSummaryMessage(products) {
+  if (!products || products.length === 0) return null;
+  const lines = [
+    'Your Active Alerts Summary',
+    '',
+    ...products.map((p, i) => {
+      const icon = p.platform === 'amazon' ? '' : '';
+      const priceChange = p.previous_price && p.current_price !== p.previous_price
+        ? ` (${p.current_price < p.previous_price ? '' : ''}${Math.round(((p.current_price - p.previous_price) / p.previous_price) * 100)}%)`
+        : '';
+      return [
+        `${i + 1}. ${icon} ${p.title || 'Product'}`,
+        `   Price: ${formatPrice(p.current_price)}${priceChange}`,
+        `   Stock: ${p.in_stock ? 'Available' : 'Out of Stock'}`,
+        p.delivery_available !== null ? `   Delivery: ${p.delivery_available ? 'Yes' : 'No'}` : null,
+        `   Target: ${formatPrice(p.target_price)}`,
+      ].filter(Boolean).join('\n');
+    }),
+    '',
+    'Check /list for details.',
+  ].join('\n');
+  return lines;
+}
+
+async function sendSummary(bot, telegramId, products) {
+  const msg = buildSummaryMessage(products);
+  if (!msg) return;
+  try {
+    await bot.telegram.sendMessage(telegramId, msg, {
+      parse_mode: 'Markdown',
+      disable_web_page_preview: true,
+    });
+  } catch (error) {
+    logger.error('Failed to send summary', { telegramId, error: error.message });
+  }
+}
+
+async function sendEnhancedIndividualAlert(bot, telegramId, product, changes) {
+  const platformEmoji = product.platform === 'amazon' ? '' : '';
+  const discount = changes.previousPrice && changes.currentPrice < changes.previousPrice
+    ? Math.round(((changes.previousPrice - changes.currentPrice) / changes.previousPrice) * 100)
+    : 0;
+
+  const text = [
+    ` Product Update`,
+    '',
+    `${platformEmoji} *${changes.title || product.title || 'Product'}*`,
+    '',
+    `Current Price: ${formatPrice(changes.currentPrice)}`,
+    changes.previousPrice ? `Old Price: ${formatPrice(changes.previousPrice)}` : null,
+    discount > 0 ? `Discount: ${discount}% OFF` : null,
+    `Target: ${formatPrice(changes.targetPrice)}`,
+    '',
+    `Stock: ${changes.inStock ? 'Available' : 'Out of Stock'}`,
+    changes.deliveryAvailable !== null ? `Pincode Status: ${changes.deliveryAvailable ? 'Delivery Available' : 'Delivery Unavailable'}` : null,
+    '',
+    `Website: ${product.platform}`,
+    `Updated: ${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}`,
+  ].filter(Boolean).join('\n');
+
+  try {
+    const kb = require('../bot/keyboard');
+    const notifKb = kb.alertNotificationKeyboard(product.id, product.url);
+    await bot.telegram.sendMessage(telegramId, text, {
+      parse_mode: 'Markdown',
+      reply_markup: notifKb.reply_markup,
+      disable_web_page_preview: true,
+    });
+    return true;
+  } catch (error) {
+    logger.error('Failed enhanced alert', { telegramId, error: error.message });
     return false;
   }
 }
@@ -269,4 +334,7 @@ module.exports = {
   buildAboutMessage,
   buildPlanMessage,
   sendAlert,
+  buildSummaryMessage,
+  sendSummary,
+  sendEnhancedIndividualAlert,
 };

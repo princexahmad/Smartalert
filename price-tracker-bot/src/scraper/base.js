@@ -1,7 +1,12 @@
 const { chromium } = require('playwright');
+const path = require('path');
 const config = require('../config');
 const logger = require('../utils/logger');
 const { withRetry, isRetryableError } = require('../utils/retry');
+
+if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
+  process.env.PLAYWRIGHT_BROWSERS_PATH = '0';
+}
 
 class BaseScraper {
   constructor(platform) {

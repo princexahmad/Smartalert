@@ -21,9 +21,9 @@ CREATE TABLE IF NOT EXISTS users (
     preferred_currency VARCHAR(10) DEFAULT 'INR'
 );
 
-CREATE INDEX idx_users_telegram_id ON users(telegram_id);
-CREATE INDEX idx_users_is_active ON users(is_active);
-CREATE INDEX idx_users_is_admin ON users(is_admin);
+CREATE INDEX IF NOT EXISTS idx_users_telegram_id ON users(telegram_id);
+CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active);
+CREATE INDEX IF NOT EXISTS idx_users_is_admin ON users(is_admin);
 
 -- =============================================
 -- PLANS TABLE
@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS plans (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_plans_code ON plans(code);
+CREATE INDEX IF NOT EXISTS idx_plans_code ON plans(code);
 
 -- =============================================
 -- SUBSCRIPTIONS TABLE
@@ -66,9 +66,9 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_subscriptions_user_id ON subscriptions(user_id);
-CREATE INDEX idx_subscriptions_status ON subscriptions(status);
-CREATE INDEX idx_subscriptions_end_date ON subscriptions(end_date);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON subscriptions(status);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_end_date ON subscriptions(end_date);
 
 -- =============================================
 -- PRODUCTS TABLE
@@ -108,11 +108,11 @@ CREATE TABLE IF NOT EXISTS products (
     UNIQUE(user_id, url)
 );
 
-CREATE INDEX idx_products_user_id ON products(user_id);
-CREATE INDEX idx_products_platform ON products(platform);
-CREATE INDEX idx_products_is_active ON products(is_active);
-CREATE INDEX idx_products_next_check_at ON products(next_check_at);
-CREATE INDEX idx_products_platform_product_id ON products(platform_product_id);
+CREATE INDEX IF NOT EXISTS idx_products_user_id ON products(user_id);
+CREATE INDEX IF NOT EXISTS idx_products_platform ON products(platform);
+CREATE INDEX IF NOT EXISTS idx_products_is_active ON products(is_active);
+CREATE INDEX IF NOT EXISTS idx_products_next_check_at ON products(next_check_at);
+CREATE INDEX IF NOT EXISTS idx_products_platform_product_id ON products(platform_product_id);
 
 -- =============================================
 -- PRICE HISTORY TABLE
@@ -129,8 +129,8 @@ CREATE TABLE IF NOT EXISTS price_history (
     scraped_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_price_history_product_id ON price_history(product_id);
-CREATE INDEX idx_price_history_scraped_at ON price_history(scraped_at);
+CREATE INDEX IF NOT EXISTS idx_price_history_product_id ON price_history(product_id);
+CREATE INDEX IF NOT EXISTS idx_price_history_scraped_at ON price_history(scraped_at);
 
 -- =============================================
 -- ALERTS TABLE
@@ -151,10 +151,10 @@ CREATE TABLE IF NOT EXISTS alerts (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_alerts_user_id ON alerts(user_id);
-CREATE INDEX idx_alerts_product_id ON alerts(product_id);
-CREATE INDEX idx_alerts_is_sent ON alerts(is_sent);
-CREATE INDEX idx_alerts_created_at ON alerts(created_at);
+CREATE INDEX IF NOT EXISTS idx_alerts_user_id ON alerts(user_id);
+CREATE INDEX IF NOT EXISTS idx_alerts_product_id ON alerts(product_id);
+CREATE INDEX IF NOT EXISTS idx_alerts_is_sent ON alerts(is_sent);
+CREATE INDEX IF NOT EXISTS idx_alerts_created_at ON alerts(created_at);
 
 -- =============================================
 -- NOTIFICATIONS TABLE
@@ -174,9 +174,9 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_notifications_user_id ON notifications(user_id);
-CREATE INDEX idx_notifications_is_read ON notifications(is_read);
-CREATE INDEX idx_notifications_type ON notifications(type);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
 
 -- =============================================
 -- ACTIVITY LOGS TABLE
@@ -194,10 +194,10 @@ CREATE TABLE IF NOT EXISTS activity_logs (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX idx_activity_logs_user_id ON activity_logs(user_id);
-CREATE INDEX idx_activity_logs_action ON activity_logs(action);
-CREATE INDEX idx_activity_logs_created_at ON activity_logs(created_at);
-CREATE INDEX idx_activity_logs_level ON activity_logs(level);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_user_id ON activity_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_action ON activity_logs(action);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_created_at ON activity_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_activity_logs_level ON activity_logs(level);
 
 -- =============================================
 -- SETTINGS TABLE (global and per-user)
@@ -215,8 +215,8 @@ CREATE TABLE IF NOT EXISTS settings (
     UNIQUE(key) 
 );
 
-CREATE INDEX idx_settings_user_id ON settings(user_id);
-CREATE INDEX idx_settings_key ON settings(key);
+CREATE INDEX IF NOT EXISTS idx_settings_user_id ON settings(user_id);
+CREATE INDEX IF NOT EXISTS idx_settings_key ON settings(key);
 
 -- =============================================
 -- DEFAULT PLANS

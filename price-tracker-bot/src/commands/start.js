@@ -19,14 +19,10 @@ async function startCommand(ctx) {
     'Send /add <url> <price> to start tracking a product.',
   ].join('\n');
 
-  await ctx.replyWithPhoto(
-    { url: 'https://img.freepik.com/free-vector/price-tag-concept-illustration_114360-3194.jpg' },
-    {
-      caption: welcomeText,
-      parse_mode: 'Markdown',
-      reply_markup: mainKeyboard().reply_markup,
-    }
-  );
+  await ctx.reply(welcomeText, {
+    parse_mode: 'Markdown',
+    reply_markup: mainKeyboard().reply_markup,
+  });
 }
 
 module.exports = startCommand;

@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const http = require('http');
 const logger = require('./utils/logger');
 const config = require('./config');
 const { runMigrations } = require('./database/migrate');
@@ -7,6 +8,15 @@ const { createBot } = require('./bot');
 const { startMonitor, stopMonitor } = require('./services/monitor');
 const { closeAll } = require('./scraper');
 const db = require('./database/connection');
+
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({
+    status: 'ok',
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  }));
+});
 
 async function main() {
   logger.info('Starting Price Tracker Bot...');
@@ -20,6 +30,10 @@ async function main() {
     process.exit(1);
   }
 
+  server.listen(config.api.port, '0.0.0.0', () => {
+    logger.info(`Health server listening on port ${config.api.port}`);
+  });
+
   const bot = createBot();
 
   startMonitor(bot);
@@ -32,6 +46,7 @@ async function main() {
     logger.info(`Received ${signal}, shutting down gracefully...`);
     stopMonitor();
     bot.stop(signal);
+    server.close();
     await closeAll();
     await db.close();
     process.exit(0);

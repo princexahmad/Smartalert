@@ -53,7 +53,8 @@ function createBot() {
       '',
       'Use the buttons below to navigate.',
     ].join('\n');
-    await ctx.reply(msg, { parse_mode: 'Markdown', reply_markup: kb.welcomeKeyboard().reply_markup });
+    const isAdmin = adminService.isAdmin(ctx.from.id);
+    await ctx.reply(msg, { parse_mode: 'Markdown', reply_markup: isAdmin ? kb.adminKeyboard().reply_markup : kb.welcomeKeyboard().reply_markup });
   });
 
   // =================== WELCOME BUTTONS ===================
@@ -392,14 +393,14 @@ function createBot() {
   bot.action('noop', async (ctx) => ctx.answerCbQuery());
 
   // =================== ADMIN PANEL ===================
-  bot.hears(' Users', async (ctx) => {
+  bot.hears('Users', async (ctx) => {
     if (!adminService.isAdmin(ctx.from.id)) return;
     const users = await userQueries.getAllUsers(1, 10);
     const msg = users.users.map(u => `ID: ${u.id} | @${u.username || 'N/A'} | ${u.is_active ? 'Active' : 'Inactive'} | ${u.is_approved ? 'Approved' : 'Pending'}`).join('\n');
     await ctx.reply(`*Users (page 1/${users.totalPages})*\n\n${msg}`, { parse_mode: 'Markdown', reply_markup: kb.backToWelcomeKeyboard().reply_markup });
   });
 
-  bot.hears(' Pending Approvals', async (ctx) => {
+  bot.hears('Pending Approvals', async (ctx) => {
     if (!adminService.isAdmin(ctx.from.id)) return;
     const pending = await adminService.getPendingApprovals();
     if (!pending || pending.length === 0) return ctx.reply('No pending approvals.');
@@ -424,26 +425,26 @@ function createBot() {
     await ctx.editMessageText('Rejected.');
   });
 
-  bot.hears(' Plans', async (ctx) => {
+  bot.hears('Plans', async (ctx) => {
     if (!adminService.isAdmin(ctx.from.id)) return;
     const plans = await newQueries.getAdminPlans();
     const msg = plans.map(p => `*${p.name}* - \u20B9${p.price_inr} | Active: ${p.is_active ? 'Yes' : 'No'} | Deletable: ${p.is_deletable ? 'Yes' : 'No'}`).join('\n');
     await ctx.reply(`*Plans*\n\n${msg}`, { parse_mode: 'Markdown', reply_markup: kb.backToWelcomeKeyboard().reply_markup });
   });
 
-  bot.hears(' Alerts', async (ctx) => {
+  bot.hears('Alerts', async (ctx) => {
     if (!adminService.isAdmin(ctx.from.id)) return;
     const all = await productQueries.getAllActiveProducts();
     await ctx.reply(`Total active alerts: ${all.length}`, { reply_markup: kb.backToWelcomeKeyboard().reply_markup });
   });
 
-  bot.hears(' Broadcast', async (ctx) => {
+  bot.hears('Broadcast', async (ctx) => {
     if (!adminService.isAdmin(ctx.from.id)) return;
     ctx.session.state = 'admin_broadcast';
     await ctx.reply('Send the message to broadcast to all users:');
   });
 
-  bot.hears(' Analytics', async (ctx) => {
+  bot.hears('Analytics', async (ctx) => {
     if (!adminService.isAdmin(ctx.from.id)) return;
     const stats = await adminService.getDashboardStats();
     const msg = [
@@ -454,7 +455,7 @@ function createBot() {
     await ctx.reply(`*Analytics*\n\n${msg}`, { parse_mode: 'Markdown', reply_markup: kb.backToWelcomeKeyboard().reply_markup });
   });
 
-  bot.hears(' Logs', async (ctx) => {
+  bot.hears('Logs', async (ctx) => {
     if (!adminService.isAdmin(ctx.from.id)) return;
     const result = await logQueries.getLogs(1, 10);
     const msg = result.logs.map(l => `[${helpers.formatDate(l.created_at)}] ${l.action} by @${l.username || 'N/A'}`).join('\n');

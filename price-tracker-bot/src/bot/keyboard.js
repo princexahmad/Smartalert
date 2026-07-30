@@ -2,11 +2,11 @@ const { Markup } = require('telegraf');
 
 function welcomeKeyboard() {
   return Markup.keyboard([
-    ['➕ Create Alert', '📋 My Alerts'],
-    ['🔔 Alert History', '📦 Product Status'],
-    ['💳 My Plan', '⭐ Upgrade Plan'],
-    ['❓ Help', '⚙️ Settings'],
-    ['📞 Contact Admin'],
+    ['Create Alert', 'My Alerts'],
+    ['Alert History', 'Product Status'],
+    ['My Plan', 'Upgrade Plan'],
+    ['Help', 'Settings'],
+    ['Contact Admin'],
   ]).resize();
 }
 
@@ -129,10 +129,10 @@ function settingsKeyboard() {
 
 function adminKeyboard() {
   return Markup.keyboard([
-    [' Users', ' Pending Approvals'],
-    [' Plans', ' Alerts'],
-    [' Broadcast', ' Analytics'],
-    [' Logs', ' Main Menu'],
+    ['Users', 'Pending Approvals'],
+    ['Plans', 'Alerts'],
+    ['Broadcast', 'Analytics'],
+    ['Logs', 'Main Menu'],
   ]).resize();
 }
 
